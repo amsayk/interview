@@ -12,7 +12,7 @@ object ApiExceptionHandler {
   def apply(): server.ExceptionHandler =
     server.ExceptionHandler {
       case RatesError.RateNotFound(pair) ⇒
-        _.complete(HttpResponse(StatusCodes.NotFound, entity = s"No quotes available for quote : '${pair.symbol}'."))
+        _.complete(HttpResponse(StatusCodes.NotFound, entity = s"No rates available for quote '${pair.symbol}'."))
 
       case RatesError.MarketClosed ⇒
         _.complete(HttpResponse(StatusCodes.Conflict, entity = s"Market is closed. Please try again later."))

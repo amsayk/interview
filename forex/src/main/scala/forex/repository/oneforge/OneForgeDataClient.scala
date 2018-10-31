@@ -37,8 +37,8 @@ final class OneForgeDataClient[F[_]](
         .send()
 
       res ← response.body match {
-        case Left(errorMsg) ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)): Error)
-        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)): Error)
+        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
+        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
         case Right(Right(json)) ⇒
           F.pure(
             json.hcursor
@@ -60,8 +60,8 @@ final class OneForgeDataClient[F[_]](
         .send()
 
       res ← response.body match {
-        case Left(errorMsg) ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)): Error)
-        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)): Error)
+        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
+        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
         case Right(Right(quotes)) ⇒
           quotes
             .traverse(quote ⇒ F.delay(quote.toRate))
@@ -78,7 +78,7 @@ final class OneForgeDataClient[F[_]](
         .send()
 
       res ← response.body match {
-        case Left(errorMsg) ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
+        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
         case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
         case Right(Right(json)) ⇒
           F.pure(

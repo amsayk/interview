@@ -28,6 +28,6 @@ case class ExecutorsConfig(
 
 final case class ForexConfig(
     apiKey: String,
-    cacheTTL: Int,
+    cacheTTL: Long,
     connectionTimeout: FiniteDuration,
 )

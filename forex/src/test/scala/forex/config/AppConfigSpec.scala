@@ -10,4 +10,3 @@ class AppConfigSpec extends FunSuite with Matchers {
   }
 
 }
-
