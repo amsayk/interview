@@ -3,6 +3,6 @@ package forex.interfaces.api.utils
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
 import marshalling._
 
-trait ApiMarshallers extends EffTaskSupport
+trait ApiMarshallers extends CatsIOSupport
 
-object ApiMarshallers extends EffTaskSupport with ErrorAccumulatingCirceSupport
+object ApiMarshallers extends CatsIOSupport with ErrorAccumulatingCirceSupport

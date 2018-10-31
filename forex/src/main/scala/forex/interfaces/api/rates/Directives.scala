@@ -15,7 +15,7 @@ trait Directives {
     } yield GetApiRequest(from, to)
 
   private val currency =
-    Unmarshaller.strict[String, Currency](Currency.fromString)
+    Unmarshaller.strict[String, Currency](Currency.withNameInsensitive)
 
 }
 

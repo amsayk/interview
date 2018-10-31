@@ -5,10 +5,15 @@ import com.typesafe.scalalogging._
 import forex.config._
 import forex.main._
 import org.zalando.grafter._
+import pureconfig.ConfigReader
+
+import scala.concurrent.duration.Duration
 
 object Main extends App with LazyLogging {
 
   var app: Option[Application] = None
+
+  implicit val durationReader: ConfigReader[Duration] = ConfigReader[String].map(s ⇒ Duration(s))
 
   pureconfig.loadConfig[ApplicationConfig]("app") match {
     case Left(errors) ⇒

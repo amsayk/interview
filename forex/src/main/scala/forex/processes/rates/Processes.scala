@@ -1,6 +1,7 @@
 package forex.processes.rates
 
 import cats.Monad
+import cats.syntax.either._
 import cats.data.EitherT
 import forex.domain._
 import forex.services._
@@ -11,6 +12,7 @@ object Processes {
 }
 
 trait Processes[F[_]] {
+
   import messages._
   import converters._
 
@@ -25,4 +27,9 @@ trait Processes[F[_]] {
       result ← EitherT(OneForge.get(Rate.Pair(request.from, request.to))).leftMap(toProcessError)
     } yield result).value
 
+  def live(request: GetRequest)(
+      implicit
+      OneForge: OneForge[F]
+  ): fs2.Stream[F, Error Either Rate] =
+    OneForge.live(Rate.Pair(request.from, request.to)).map(_.leftMap(toProcessError))
 }

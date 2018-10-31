@@ -20,6 +20,12 @@ object Protocol {
       timestamp: Timestamp
   )
 
+  final case class ErrorApiResponse(
+      `type`: String,
+      code: String,
+      message: String,
+  )
+
   object GetApiResponse {
     implicit val encoder: Encoder[GetApiResponse] = deriveEncoder[GetApiResponse]
   }
