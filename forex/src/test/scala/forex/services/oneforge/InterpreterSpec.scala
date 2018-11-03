@@ -143,7 +143,7 @@ class InterpreterSpec extends WordSpec with MustMatchers {
         var putCalled = false
 
         override def quotes(request: List[Rate.Pair]): IO[List[Rate]] =
-          IO.pure({ hit = true; List(rate) })
+          IO.delay({ hit = true; List(rate) })
 
         override def get(
             symbol: String

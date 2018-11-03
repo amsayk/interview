@@ -69,7 +69,7 @@ final class Impl[F[_]: Mode: Timer] private[oneforge] (
 
     def fetchFromCache: F[Option[Rate.Cached]] = cache.get(req.symbol)
 
-    def fetchFromNetwork(now: Long): EitherT[F, Error, Rate] =
+    def fetchFromNetwork: EitherT[F, Error, Rate] =
       for {
         marketOpen ← EitherT.liftF(client.marketOpen)
 
@@ -89,6 +89,8 @@ final class Impl[F[_]: Mode: Timer] private[oneforge] (
         }
 
         endOfDay = LocalDate.now.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault).toEpochSecond
+
+        now ← EitherT.liftF(clock.monotonic(TimeUnit.SECONDS))
 
         ttl = Duration(
           endOfDay - now,
@@ -110,7 +112,7 @@ final class Impl[F[_]: Mode: Timer] private[oneforge] (
 
       r ← rate match {
         case Some(r) if !isExpired(r, now) ⇒ EitherT.rightT[F, Error](r.rate)
-        case _                             ⇒ fetchFromNetwork(now)
+        case _                             ⇒ fetchFromNetwork
       }
 
     } yield r).value
