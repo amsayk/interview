@@ -8,14 +8,13 @@ scalacOptions ++= Seq(
   "-encoding",
   "UTF-8",
   "-feature",
-  "-language:existentials",
   "-language:higherKinds",
-  "-language:experimental.macros",
-  "-language:implicitConversions"
 )
 
-resolvers +=
-  "Sonatype OSS Snapshots".at("https://oss.sonatype.org/content/repositories/snapshots")
+resolvers ++= Seq(
+  "Sonatype release repository".at("https://oss.sonatype.org/content/repositories/releases/"),
+  Resolver.bintrayRepo("lonelyplanet", "maven")
+)
 
 libraryDependencies ++= Seq(
   "com.github.pureconfig"      %% "pureconfig"                     % "0.9.2",
@@ -38,13 +37,15 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp"      %% "core"                           % "1.3.9",
   "com.softwaremill.sttp"      %% "circe"                          % "1.3.9",
   "com.beachape"               %% "enumeratum"                     % "1.5.13",
-  "com.typesafe.akka"          %% "akka-stream"                    % "2.5.16",
-  "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.16",
+  "com.typesafe.akka"          %% "akka-stream"                    % "2.5.17",
+  "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.17",
   "com.github.cb372"           %% "scalacache-core"                % "0.26.0",
   "com.github.cb372"           %% "scalacache-cats-effect"         % "0.26.0",
   "com.github.cb372"           %% "scalacache-circe"               % "0.26.0",
   "com.github.cb372"           %% "scalacache-cache2k"             % "0.26.0",
   "com.softwaremill.sttp"      %% "async-http-client-backend-cats" % "1.3.9",
+  "com.softwaremill.sttp"      %% "prometheus-backend"             % "1.4.2",
+  "com.lonelyplanet"           %% "prometheus-akka-http"           % "0.3.3",
   "org.scalatest"              %% "scalatest"                      % "3.0.5" % Test,
   compilerPlugin(("org.scalamacros" %% "paradise" % "2.1.1").cross(CrossVersion.full))
 )

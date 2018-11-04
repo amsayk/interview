@@ -7,14 +7,15 @@ import utils._
 
 @readerOf[ApplicationConfig]
 case class Routes(
-    ratesRoutes: rates.Routes
+    ratesRoutes: rates.Routes,
+    metricsRoutes: metrics.Routes,
 ) {
   import server.Directives._
 
   lazy val route: server.Route =
     handleExceptions(ApiExceptionHandler()) {
       handleRejections(ApiRejectionHandler()) {
-        ratesRoutes.route
+        ratesRoutes.route ~ metricsRoutes.route
       }
     }
 }

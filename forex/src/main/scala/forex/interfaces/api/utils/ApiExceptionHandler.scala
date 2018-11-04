@@ -5,8 +5,6 @@ import akka.http.scaladsl._
 import akka.http.scaladsl.model.HttpResponse
 import forex.processes._
 
-import cats.syntax.show._
-
 object ApiExceptionHandler {
 
   def apply(): server.ExceptionHandler =
@@ -26,7 +24,7 @@ object ApiExceptionHandler {
         _.complete(HttpResponse(StatusCodes.InternalServerError, entity = "Something went wrong."))
 
       case _: Throwable ⇒
-        _.complete(HttpResponse(StatusCodes.InternalServerError, entity = s"Something went wrong."))
+        _.complete(HttpResponse(StatusCodes.InternalServerError, entity = "Something went wrong."))
     }
 
 }

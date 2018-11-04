@@ -6,6 +6,7 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import com.softwaremill.sttp.circe.asJson
+import com.softwaremill.sttp.prometheus.PrometheusBackend
 import forex.config.ForexConfig
 import forex.domain.Rate
 import forex.repository.OneForgeResponse
@@ -21,13 +22,21 @@ final class OneForgeDataClient[F[_]](
     with Start
     with Stop {
 
-  private implicit lazy val sttpBackend =
-    AsyncHttpClientCatsBackend(
+  import OneForgeDataClient._
+
+  private implicit lazy val sttpBackend = PrometheusBackend[F, Nothing](
+    AsyncHttpClientCatsBackend[F](
       options = SttpBackendOptions(
         connectionTimeout = config.connectionTimeout,
         proxy = None,
       )
-    )
+    ),
+    requestToHistogramNameMapper = _ ⇒ Some(HistogramName),
+    requestToInProgressGaugeNameMapper = _ ⇒ Some(RequestsInProgressGaugeName),
+    requestToSuccessCounterMapper = _ ⇒ Some(SuccessCounterName),
+    requestToErrorCounterMapper = _ ⇒ Some(ErrorCounterName),
+    requestToFailureCounterMapper = _ ⇒ Some(FailureCounterName),
+  )
 
   def marketOpen: F[Boolean] =
     for {
@@ -98,4 +107,12 @@ final class OneForgeDataClient[F[_]](
     StopResult.eval("OneForgeDataClient") {
       sttpBackend.close()
     }
+}
+
+object OneForgeDataClient {
+  val HistogramName = "forex_request_latency"
+  val RequestsInProgressGaugeName = "forex_requests_in_progress"
+  val SuccessCounterName = "forex_requests_success_count"
+  val ErrorCounterName = "forex_requests_error_count"
+  val FailureCounterName = "forex_requests_failure_count"
 }
