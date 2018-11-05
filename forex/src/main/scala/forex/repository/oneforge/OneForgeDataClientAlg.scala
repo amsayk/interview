@@ -1,18 +1,14 @@
 package forex.repository
 package oneforge
 
-import cats.data.Reader
+import cats.data.{ EitherT, Reader }
 import forex.config.ApplicationConfigReader
 import forex.domain.Rate
-
 import cats.effect.IO
+import forex.services.oneforge.Error
 
 trait OneForgeDataClientAlg[F[_]] {
-  def marketOpen: F[Boolean]
-
-  def quotes(request: List[Rate.Pair]): F[List[Rate]]
-
-  def quotaExceeded: F[Boolean]
+  def quotes(request: List[Rate.Pair]): EitherT[F, Error, List[Rate]]
 }
 
 object OneForgeDataClientAlg {

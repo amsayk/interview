@@ -4,6 +4,7 @@ package oneforge
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 
+import cats.data.EitherT
 import cats.effect.{ Clock, ContextShift, IO, Timer }
 import forex.config.ForexConfig
 import forex.domain.{ Currency, Price, Rate, Timestamp }
@@ -20,36 +21,25 @@ class InterpreterSpec extends WordSpec with MustMatchers {
 
   "get quote API" when {
 
-    "market closed" should {
+    "api error" should {
 
-      "fail" in new Context {
-        override val marketOpen: IO[Boolean] = IO.pure(false)
+      "fail with api error" in new Context {
 
-        OneForge.get(Rate.Pair(Currency.EUR, Currency.JPY)).unsafeRunSync() mustBe Left(OneForgeError.MarketClosed)
+        override def quotes(pair: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] =
+          EitherT.leftT(OneForgeError.OneForgeApiError(None))
 
-        a[OneForgeError.MarketClosed.type] should be thrownBy {
+        OneForge.get(Rate.Pair(Currency.EUR, Currency.JPY)).unsafeRunSync() mustBe Left(
+          OneForgeError.OneForgeApiError(None)
+        )
+
+        a[OneForgeError.OneForgeApiError] should be thrownBy {
           OneForge.live(Rate.Pair(Currency.EUR, Currency.JPY)).compile.lastOrError.unsafeRunSync()
         }
 
       }
     }
 
-    "quota exceeded" should {
-
-      "fail" in new Context {
-
-        override val quotaExceeded: IO[Boolean] = IO.pure(true)
-
-        OneForge.get(Rate.Pair(Currency.EUR, Currency.JPY)).unsafeRunSync() mustBe Left(OneForgeError.QuotaExceeded)
-
-        a[OneForgeError.QuotaExceeded.type] should be thrownBy {
-          OneForge.live(Rate.Pair(Currency.EUR, Currency.JPY)).compile.lastOrError.unsafeRunSync()
-        }
-
-      }
-    }
-
-    "market open and quota available" should {
+    "no api error" should {
 
       "get rate successfully" in new Context {
         val pair = Rate.Pair(Currency.EUR, Currency.JPY)
@@ -60,8 +50,8 @@ class InterpreterSpec extends WordSpec with MustMatchers {
           timestamp = Timestamp(OffsetDateTime.now),
         )
 
-        override def quotes(request: List[Rate.Pair]): IO[List[Rate]] =
-          IO.pure(
+        override def quotes(request: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] =
+          EitherT.pure(
             List(
               rate
             )
@@ -83,8 +73,8 @@ class InterpreterSpec extends WordSpec with MustMatchers {
           timestamp = Timestamp(OffsetDateTime.now),
         )
 
-        override def quotes(request: List[Rate.Pair]): IO[List[Rate]] =
-          IO.pure(
+        override def quotes(request: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] =
+          EitherT.pure(
             List(
               rate
             )
@@ -142,8 +132,8 @@ class InterpreterSpec extends WordSpec with MustMatchers {
         var hit = false
         var putCalled = false
 
-        override def quotes(request: List[Rate.Pair]): IO[List[Rate]] =
-          IO.delay({ hit = true; List(rate) })
+        override def quotes(request: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] =
+          EitherT.liftF(IO.delay({ hit = true; List(rate) }))
 
         override def get(
             symbol: String
@@ -182,8 +172,8 @@ class InterpreterSpec extends WordSpec with MustMatchers {
         var hit = false
         var putCalled = false
 
-        override def quotes(request: List[Rate.Pair]): IO[List[Rate]] =
-          IO.delay({ hit = true; List(rate) })
+        override def quotes(request: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] =
+          EitherT.liftF(IO.delay({ hit = true; List(rate) }))
 
         override def get(
             symbol: String
@@ -202,11 +192,7 @@ class InterpreterSpec extends WordSpec with MustMatchers {
   }
 
   class Context extends OneForgeDataClientAlg[IO] with CacheClientAlg[IO] { self ⇒
-    def marketOpen: IO[Boolean] = IO.pure(true)
-
-    def quotes(request: List[Rate.Pair]): IO[List[Rate]] = IO.pure(List.empty)
-
-    def quotaExceeded: IO[Boolean] = IO.pure(false)
+    def quotes(request: List[Rate.Pair]): EitherT[IO, OneForgeError, List[Rate]] = EitherT.pure(List.empty)
 
     def cacheTTL = 5L
 

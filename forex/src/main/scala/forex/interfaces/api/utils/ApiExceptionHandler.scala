@@ -1,8 +1,7 @@
 package forex.interfaces.api.utils
 
-import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.{ HttpEntity, HttpResponse, StatusCodes }
 import akka.http.scaladsl._
-import akka.http.scaladsl.model.HttpResponse
 import forex.processes._
 
 object ApiExceptionHandler {
@@ -12,12 +11,12 @@ object ApiExceptionHandler {
       case RatesError.RateNotFound(pair) ⇒
         _.complete(HttpResponse(StatusCodes.NotFound, entity = s"No rates available for quote '${pair.symbol}'."))
 
-      case RatesError.MarketClosed ⇒
-        _.complete(HttpResponse(StatusCodes.Conflict, entity = s"Market is closed. Please try again later."))
-
-      case RatesError.QuotaExceeded ⇒
+      case RatesError.ApiError(message) ⇒
         _.complete(
-          HttpResponse(StatusCodes.Conflict, entity = s"Quota is exceeded to today. Please try again tomorrow.")
+          HttpResponse(
+            StatusCodes.Conflict,
+            entity = HttpEntity(message.getOrElse("Something went wrong with 1forge API."))
+          )
         )
 
       case RatesError.System(_) ⇒

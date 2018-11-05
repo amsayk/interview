@@ -28,10 +28,13 @@ object Converters {
         code = "RateNotFound",
         message = s"No quotes available from ${pair.from} to ${pair.to}."
       )
-    case Error.QuotaExceeded ⇒
-      ErrorApiResponse(`type` = "Error", code = "QuotaExceeded", message = s"Quota exceeded for the day.")
-    case Error.MarketClosed ⇒ ErrorApiResponse(`type` = "Error", code = "MarketClosed", message = s"Market closed.")
-    case Error.System(_)    ⇒ ErrorApiResponse(`type` = "Error", code = "System", message = s"Some went wrong.")
+    case Error.ApiError(message) ⇒
+      ErrorApiResponse(
+        `type` = "Error",
+        code = "ApiError",
+        message = message.getOrElse("Something went wrong with 1forge API.")
+      )
+    case Error.System(_) ⇒ ErrorApiResponse(`type` = "Error", code = "System", message = "Some went wrong.")
   }
 
 }

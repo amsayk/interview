@@ -1,6 +1,7 @@
 package forex.repository.oneforge
 
 import cats.Eval
+import cats.data.EitherT
 import cats.effect.Async
 import cats.implicits._
 import com.softwaremill.sttp._
@@ -13,7 +14,7 @@ import forex.repository.OneForgeResponse
 import forex.services.oneforge.Error
 import io.circe._
 import io.circe.generic.auto._
-import org.zalando.grafter.{ Start, StartResult, Stop, StopResult }
+import org.zalando.grafter.{Start, StartResult, Stop, StopResult}
 
 final class OneForgeDataClient[F[_]](
     config: ForexConfig,
@@ -38,67 +39,50 @@ final class OneForgeDataClient[F[_]](
     requestToFailureCounterMapper = _ ⇒ Some(FailureCounterName),
   )
 
-  def marketOpen: F[Boolean] =
-    for {
-      response ← sttp
-        .get(uri"https://forex.1forge.com/1.0.3/market_status?api_key=${config.apiKey}")
-        .response(asJson[Json])
-        .send()
-
-      res ← response.body match {
-        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
-        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
-        case Right(Right(json)) ⇒
-          F.pure(
-            json.hcursor
-              .get[Boolean]("market_is_open")
-              .toOption
-              .getOrElse(false)
-          )
-      }
-
-    } yield res
-
-  def quotes(request: List[Rate.Pair]): F[List[Rate]] = {
+  def quotes(request: List[Rate.Pair]): EitherT[F, Error, List[Rate]] = {
     val pairs = request.map(_.symbol).mkString(",")
 
     for {
-      response ← sttp
-        .get(uri"https://forex.1forge.com/1.0.3/quotes?pairs=$pairs&api_key=${config.apiKey}")
-        .response(asJson[List[OneForgeResponse]])
-        .send()
+      response ← EitherT.liftF(
+        sttp
+          .get(uri"https://forex.1forge.com/1.0.3/quotes?pairs=$pairs&api_key=${config.apiKey}")
+          .response(asJson[Json])
+          .send()
+      )
 
       res ← response.body match {
-        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
-        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
-        case Right(Right(quotes)) ⇒
-          quotes
-            .traverse(quote ⇒ F.delay(quote.toRate))
+        case Left(errorMsg)     ⇒ EitherT.leftT[F, List[Rate]](Error.System(new RuntimeException(errorMsg)): Error)
+        case Right(Left(error)) ⇒ EitherT.leftT[F, List[Rate]](Error.System(new RuntimeException(error.message)): Error)
+        case Right(Right(json)) ⇒
+          if (isErrorResponse(json)) {
+            val message = json.hcursor
+              .get[String]("message")
+              .toOption
+
+            EitherT.leftT[F, List[Rate]](Error.OneForgeApiError(message): Error)
+          } else {
+
+            json.as[List[OneForgeResponse]] match {
+              case Left(error) ⇒
+                EitherT.leftT[F, List[Rate]](Error.System(new RuntimeException(error.message)): Error)
+
+              case Right(quotes) ⇒
+                quotes
+                  .traverse(
+                    quote ⇒
+                      F.delay(quote.toRate).attemptT.leftMap { e ⇒
+                        Error.System(new RuntimeException(e.getMessage)): Error
+                    }
+                  )
+
+            }
+
+          }
+
       }
 
     } yield res
   }
-
-  def quotaExceeded: F[Boolean] =
-    for {
-      response ← sttp
-        .get(uri"https://forex.1forge.com/1.0.3/quota?api_key=${config.apiKey}")
-        .response(asJson[Json])
-        .send()
-
-      res ← response.body match {
-        case Left(errorMsg)     ⇒ F.raiseError(Error.System(new RuntimeException(errorMsg)))
-        case Right(Left(error)) ⇒ F.raiseError(Error.System(new RuntimeException(error.message)))
-        case Right(Right(json)) ⇒
-          F.pure(
-            json.hcursor
-              .get[Int]("quota_remaining")
-              .toOption
-              .contains(0)
-          )
-      }
-
-    } yield res
 
   override def start: Eval[StartResult] =
     StartResult.eval("OneForgeDataClient") {}
@@ -110,9 +94,16 @@ final class OneForgeDataClient[F[_]](
 }
 
 object OneForgeDataClient {
-  val HistogramName = "forex_request_latency"
-  val RequestsInProgressGaugeName = "forex_requests_in_progress"
-  val SuccessCounterName = "forex_requests_success_count"
-  val ErrorCounterName = "forex_requests_error_count"
-  val FailureCounterName = "forex_requests_failure_count"
+  val HistogramName = "oneforge_request_latency"
+  val RequestsInProgressGaugeName = "oneforge_requests_in_progress"
+  val SuccessCounterName = "oneforge_requests_success_count"
+  val ErrorCounterName = "oneforge_requests_error_count"
+  val FailureCounterName = "oneforge_requests_failure_count"
+
+  private[oneforge] def isErrorResponse(json: Json): Boolean =
+    json.hcursor
+      .get[Boolean]("error")
+      .toOption
+      .getOrElse(false)
+
 }

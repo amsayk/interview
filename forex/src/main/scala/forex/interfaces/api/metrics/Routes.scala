@@ -9,7 +9,7 @@ import org.zalando.grafter.macros._
 
 @readerOf[ApplicationConfig]
 case class Routes(
-) {
+    ) {
 
   lazy val metricsEndpoint = new MetricsEndpoint(CollectorRegistry.defaultRegistry)
 
@@ -17,5 +17,4 @@ case class Routes(
 
 }
 
-object Routes {
-}
+object Routes {}

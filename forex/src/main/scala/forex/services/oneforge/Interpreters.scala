@@ -71,17 +71,7 @@ final class Impl[F[_]: Mode: Timer] private[oneforge] (
 
     def fetchFromNetwork: EitherT[F, Error, Rate] =
       for {
-        marketOpen ← EitherT.liftF(client.marketOpen)
-
-        _ ← if (marketOpen) EitherT.pure[F, Error](())
-        else EitherT.leftT[F, Rate](Error.MarketClosed: Error)
-
-        quotaExceeded ← EitherT.liftF(client.quotaExceeded)
-
-        _ ← if (quotaExceeded) EitherT.leftT[F, Rate](Error.QuotaExceeded: Error)
-        else EitherT.pure[F, Error](())
-
-        quotes ← EitherT.liftF(client.quotes(request))
+        quotes ← client.quotes(request)
 
         quote ← quotes.find(_.pair.symbol == req.symbol) match {
           case Some(v) ⇒ EitherT.pure[F, Error](v)
@@ -111,7 +101,7 @@ final class Impl[F[_]: Mode: Timer] private[oneforge] (
       rate ← EitherT.liftF(fetchFromCache)
 
       r ← rate match {
-        case Some(r) if !isExpired(r, now) ⇒ EitherT.rightT[F, Error](r.rate)
+        case Some(r) if !isExpired(r, now) ⇒ EitherT.pure[F, Error](r.rate)
         case _                             ⇒ fetchFromNetwork
       }
 
